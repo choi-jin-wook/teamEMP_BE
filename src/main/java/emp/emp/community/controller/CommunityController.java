@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Objects;
 
 @RestController
+@RequestMapping("/community")
 @RequiredArgsConstructor
 public class CommunityController {
 
@@ -45,7 +46,7 @@ public class CommunityController {
 
 
     // 1. 게시글 작성
-    @PostMapping("community/createPost")
+    @PostMapping("/posts")
     public ResponseEntity<PostResponse> createPost(@RequestBody PostRequest postRequest, @AuthenticationPrincipal CustomUserDetails customUserDetails, MultipartFile image) {
         Member member = securityUtil.getCurrentMember();
         PostResponse postResponse = postService.createPost(member, postRequest, image);
@@ -56,7 +57,7 @@ public class CommunityController {
 
 
     // 2. 게시글 조회 (완료)
-    @GetMapping("/community/{postId}")
+    @GetMapping("/posts/{postId}")
     public ResponseEntity<PostResponse> getPost(@PathVariable long postId, @AuthenticationPrincipal CustomUserDetails customUserDetails) {
         Member member = securityUtil.getCurrentMember();
         PostResponse post = postService.getPostByIdAndMember(postId, member);
@@ -65,7 +66,7 @@ public class CommunityController {
 
 
 // 3. 좋아요 누르기 (완료)
-    @PostMapping("/community/{postId}/like")
+    @PostMapping("/posts/{postId}/like")
     public ResponseEntity<PostResponse> createOrDeleteLike(@PathVariable long postId, @AuthenticationPrincipal CustomUserDetails customUserDetails) {
         Member member = securityUtil.getCurrentMember();
         PostResponse postResponse = likeService.createOrDeleteLike(member, postId);
@@ -74,7 +75,7 @@ public class CommunityController {
 
 
     //    4-1 게시글 수정 폼 불러오기
-    @GetMapping("/community/update/{postId}")
+    @GetMapping("/posts/{postId}/edit")
     public ResponseEntity<Map<String, Object>> updatePost(@PathVariable long postId) {
         Map<String, Object> response = postService.getModifyForm(postId);
         return ResponseEntity.ok(response);
@@ -82,7 +83,7 @@ public class CommunityController {
 
 
 // 4. 게시글 수정
-    @PostMapping("/community/update/{postId}")
+    @PostMapping("/posts/{postId}")
     public ResponseEntity<PostResponse> updatePost(@PathVariable long postId, @RequestBody PostRequest postRequest) {
         PostResponse postResponse = postService.modifyPost(postId, postRequest);
         return ResponseEntity.ok(postResponse);
@@ -94,7 +95,7 @@ public class CommunityController {
 
 // 5. 게시글 삭제
 // 빈환값 제외 구현 완료
-    @DeleteMapping("/community/delete/{postId}")
+    @DeleteMapping("/posts/{postId}")
     public ResponseEntity<Void> deletePost(@PathVariable long postId) {
         postService.deletePost(postId);
         return ResponseEntity.noContent().build();
@@ -102,7 +103,7 @@ public class CommunityController {
 
 
 // 6. 카테코리별 글 조회 (완료)
-    @GetMapping("/community/{healthCategory}")
+    @GetMapping("/categories/{healthCategory}")
     public ResponseEntity<List<Post>> getPost(@PathVariable HealthCategory healthCategory) {
         List<Post> post = postService.getPostsByHealthCategory(healthCategory);
         return ResponseEntity.ok(post);
@@ -110,7 +111,7 @@ public class CommunityController {
 
 
     // 7. 댓글 달기
-    @PostMapping("/community/{postId}/comments")
+    @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<Comment> registerComment(@PathVariable long postId, @AuthenticationPrincipal CustomUserDetails customUserDetails,@RequestBody CommentRequest commentRequest) {
         Member member = securityUtil.getCurrentMember();
         Comment comment = commentService.registerComment(postId, member, commentRequest);
@@ -121,14 +122,14 @@ public class CommunityController {
 
 
     // 8 - 1. 댓글 수정 폼 불러오가
-    @GetMapping("community/{postId}/comment/modify/{commentId}")
+    @GetMapping("/posts/{postId}/comments/{commentId}/edit")
     public ResponseEntity<Map<String, Object>> getPatchCommentForm(long commentId) {
         Map<String, Object> commentUpdateForm = commentService.getModifyForm(commentId);
         return ResponseEntity.ok(commentUpdateForm);
     }
 
     // 8 - 2. 댓글 수정 구현
-    @PatchMapping("community/{postId}/comment/modify/{commentId}")
+    @PostMapping("/posts/{postId}/comments/{commentId}")
     public ResponseEntity<Comment> patchComment(@PathVariable long commentId, CommentRequest commentRequest) {
         Comment modifyComment = commentService.modifyComment(commentId ,commentRequest);
         return ResponseEntity.ok(modifyComment);
@@ -136,7 +137,7 @@ public class CommunityController {
     }
 
     // 9. 댓글 삭제
-    @DeleteMapping("/community/{postId}/comments/{commentId}")
+    @DeleteMapping("/posts/{postId}/comments/{commentId}")
     public ResponseEntity<String> deleteComment(@PathVariable long postId, @PathVariable long commentId) {
         String message = commentService.deleteComment(commentId);
         return ResponseEntity.ok(message);
