@@ -27,9 +27,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -189,10 +193,14 @@ public class ServiceTest {
             );
             PostResponse postResponse = postService.createPost(testMember, validPostRequest, mockFile);
 
+            Map<String, Object> modifyForm = postService.getModifyForm(postResponse.getPostId());
+
+            assertThat(modifyForm).isNotNull();
+
         }
 
         @Test
-        void modifyPost () {
+        void realModifyPost () {
             MultipartFile mockFile = new MockMultipartFile(
                     "file",                         // name
                     "test-image.jpg",               // original filename
@@ -200,6 +208,52 @@ public class ServiceTest {
                     "test-image-content".getBytes() // content
             );
             PostResponse postResponse = postService.createPost(testMember, validPostRequest, mockFile);
+
+            Post post1 = postRepository.findById(postResponse.getPostId()).orElseThrow();
+
+            System.out.println(post1.getId());
+            System.out.println(post1.getTitle());
+            System.out.println(post1.getBodyText());
+            System.out.println(post1.getPostType());
+            System.out.println(post1.getHealthCategory());
+            System.out.println(post1.getMember());
+            System.out.println(post1.getImageUrl());
+            System.out.println(post1.getCreatedAt());
+            System.out.println(post1.getUpdatedAt());
+
+            Map<String, Object> modifyForm = postService.getModifyForm(postResponse.getPostId());
+
+            PostRequest postRequest = (PostRequest) modifyForm.get("post");
+            long postId = (long) modifyForm.get("postId");
+
+            postRequest.setTitle("수정된 제목");
+            postRequest.setBodyText("수정된 본문");
+            postRequest.setPostType(PostType.INFORMATION);
+            postRequest.setHealthCategory(HealthCategory.MENTAL_HEALTH);
+
+            Post post2 = postRepository.findById(postId).orElseThrow(); // 한 번만 호출
+            post2.setTitle(postRequest.getTitle());
+            post2.setBodyText(postRequest.getBodyText());
+            post2.setPostType(postRequest.getPostType());
+            post2.setHealthCategory(postRequest.getHealthCategory());
+            post2.setUpdatedAt(LocalDateTime.now()); // 현재 시간 설정
+
+            postRepository.save(post2); // 저장
+
+            System.out.println(" ");
+            System.out.println(post2.getId());
+            System.out.println(post2.getTitle());
+            System.out.println(post2.getBodyText());
+            System.out.println(post2.getPostType());
+            System.out.println(post2.getHealthCategory());
+            System.out.println(post2.getMember());
+            System.out.println(post2.getImageUrl());
+            System.out.println(post2.getCreatedAt());
+            System.out.println(post2.getUpdatedAt());
+
+
+            assertThat(postResponse.getPostId()).isEqualTo(postId);
+
 
         }
 
@@ -288,7 +342,56 @@ public class ServiceTest {
             System.out.println(post.getComments());
             System.out.println(post.getLikes());
             System.out.println(post.getImageUrl());
+
+            assertThat(post.getComments()).isNotEmpty();
         }
+
+        @Test
+        void getUpdateCommentForm() {
+            MultipartFile mockFile = new MockMultipartFile(
+                    "file",                         // name
+                    "test-image.jpg",               // original filename
+                    "image/jpeg",                   // content type
+                    "test-image-content".getBytes() // content
+            );
+            PostResponse postResponse = postService.createPost(testMember, validPostRequest, mockFile);
+            CommentRequest commentRequest = new CommentRequest();
+            commentRequest.setComment("댓글이용");
+            Comment comment = commentService.registerComment(postResponse.getPostId(), testMember, commentRequest);
+
+            Map<String, Object> commentUpdateForm = commentService.getModifyForm(comment.getId());
+
+            assertThat(((CommentRequest) commentUpdateForm.get("comment")).getComment()).isEqualTo("댓글이용");
+            assertThat(commentUpdateForm.get("commentId")).isEqualTo(comment.getId());
+
+        }
+
+        @Test
+        void realUpdateComment() {
+            MultipartFile mockFile = new MockMultipartFile(
+                    "file",                         // name
+                    "test-image.jpg",               // original filename
+                    "image/jpeg",                   // content type
+                    "test-image-content".getBytes() // content
+            );
+            PostResponse postResponse = postService.createPost(testMember, validPostRequest, mockFile);
+            CommentRequest commentRequest = new CommentRequest();
+            commentRequest.setComment("댓글이용");
+            Comment comment = commentService.registerComment(postResponse.getPostId(), testMember, commentRequest);
+
+            Map<String, Object> commentUpdateForm = commentService.getModifyForm(comment.getId());
+
+            CommentRequest modifyCommentRequest = new CommentRequest();
+            modifyCommentRequest.setComment("댓글수정");
+
+            Comment modifiedComment = commentService.modifyComment((Long) commentUpdateForm.get("commentId"), modifyCommentRequest);
+            assertThat(comment.getId()).isEqualTo(modifiedComment.getId());
+            assertThat(comment.getCreatedAt()).isEqualTo(modifiedComment.getCreatedAt());
+//            assertThat(comment.getUpdatedAt()).isNotEqualTo(modifiedComment.getUpdatedAt());
+            assertThat(comment.getContent()).isNotEqualTo(commentUpdateForm.get("comment"));
+        }
+
+
 
 
 

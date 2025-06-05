@@ -13,6 +13,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 
@@ -33,6 +36,8 @@ public class CommentService {
         comment.setPost(post);
         comment.setMember(member);
         comment.setContent(commentRequest.getComment());
+        comment.setUpdatedAt(LocalDateTime.now());
+        comment.setCreatedAt(LocalDateTime.now());
 
         return commentRepository.save(comment);
 
@@ -41,7 +46,7 @@ public class CommentService {
 
     }
 
-    public String deleteComment(Long commentId) {
+    public String deleteComment(long commentId) {
         Optional<Comment> comment = commentRepository.findById(commentId);
         if (comment.isPresent()) {
             commentRepository.delete(comment.get());
@@ -52,18 +57,24 @@ public class CommentService {
 
     }
 
-    public CommentRequest getModifyForm(long commentId) {
+    public Map<String, Object> getModifyForm(long commentId) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
 
         CommentRequest commentRequest = new CommentRequest();
         commentRequest.setComment(comment.getContent());
-        return commentRequest;
+
+        Map<String, Object> commentUpdateForm = new HashMap<>();
+        commentUpdateForm.put("commentId", comment.getId()); // 파라미터가 아닌 실제 Comment 객체의 id 사용
+        commentUpdateForm.put("comment", commentRequest);
+
+        return commentUpdateForm;
     }
 
     public Comment modifyComment(long commentId, CommentRequest commentRequest) {
         Comment comment = commentRepository.findById(commentId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다"));
         comment.setContent(commentRequest.getComment());
+        comment.setUpdatedAt(LocalDateTime.now());
         return commentRepository.save(comment);
     }
 //    addComment(Long postId, CommentRequest dto, Member member)

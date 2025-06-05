@@ -23,9 +23,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -131,7 +129,7 @@ public class PostService {
     }
 
     // 4-1. 게시물 수정 폼 불러오기
-    public PostRequest getModifyForm(long postId) {
+    public Map<String, Object> getModifyForm(long postId) {
         PostRequest postInformation = new PostRequest();
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
@@ -141,7 +139,11 @@ public class PostService {
         postInformation.setPostType(post.getPostType());
         postInformation.setHealthCategory(post.getHealthCategory());
 
-        return postInformation;
+        Map<String, Object> response = new HashMap<>();
+        response.put("postId", postId);
+        response.put("post", postInformation);
+
+        return response;
     }
 
     // 4-2 게시글 수정
@@ -154,7 +156,7 @@ public class PostService {
         post.setPostType(postRequest.getPostType());
         post.setHealthCategory(postRequest.getHealthCategory());
 
-        // 3. 저장
+        // 저장
         Post updatedPost = postRepository.save(post);
 
         PostResponse postResponse = new PostResponse();
@@ -177,7 +179,7 @@ public class PostService {
 
 
 //    5. 게시글 삭제
-    public void deletePost(Long postId) {
+    public void deletePost(long postId) {
         postRepository.deleteById(postId);
     }
 
