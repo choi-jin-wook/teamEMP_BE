@@ -6,8 +6,10 @@ import emp.emp.community.dto.request.CommentRequest;
 import emp.emp.community.dto.request.PostRequest;
 import emp.emp.community.dto.response.PostResponse;
 import emp.emp.community.entity.Comment;
+import emp.emp.community.entity.Like;
 import emp.emp.community.entity.Post;
 import emp.emp.community.enums.HealthCategory;
+import emp.emp.community.repository.CommentRepository;
 import emp.emp.community.service.CommentService;
 import emp.emp.community.service.LikeService;
 import emp.emp.community.service.PostService;
@@ -26,6 +28,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CommunityController {
 
+    private final CommentRepository commentRepository;
     private SecurityUtil securityUtil;
     private PostService postService;
     private LikeService likeService;
@@ -41,39 +44,51 @@ public class CommunityController {
 
     // 1. 게시글 작성
     @PostMapping("community/createPost")
-    public ResponseEntity<Void> createPost(@RequestBody PostRequest postRequest, @AuthenticationPrincipal CustomUserDetails customUserDetails, MultipartFile image) {
+    public ResponseEntity<PostResponse> createPost(@RequestBody PostRequest postRequest, @AuthenticationPrincipal CustomUserDetails customUserDetails, MultipartFile image) {
         Member member = securityUtil.getCurrentMember();
-        long postId = postService.createPost(member, postRequest, image);
-        URI redirectUrl = URI.create("/community/get/" + postId);
-        return ResponseEntity.created(redirectUrl).build();
+        PostResponse postResponse = postService.createPost(member, postRequest, image);
+
+        return ResponseEntity.ok(postResponse);
     }
 
 
 
     // 2. 게시글 조회 (완료)
     @GetMapping("/community/{postId}")
-    public ResponseEntity<PostResponse> getPost(@PathVariable int postId) {
-        PostResponse post = postService.getPostById(postId);
+    public ResponseEntity<PostResponse> getPost(@PathVariable int postId, @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+        Member member = securityUtil.getCurrentMember();
+        PostResponse post = postService.getPostByIdAndMember(postId, member);
         return ResponseEntity.ok(post);
     }
 
 
 // 3. 좋아요 누르기 (완료)
     @PostMapping("/community/{postId}/like")
-    public ResponseEntity<String> createOrDeleteLike(@PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+    public ResponseEntity<PostResponse> createOrDeleteLike(@PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails customUserDetails) {
         Member member = securityUtil.getCurrentMember();
-        String message = likeService.createOrDeleteLike(member, postId);
-        return ResponseEntity.ok(message);
+        PostResponse postResponse = likeService.createOrDeleteLike(member, postId);
+        return ResponseEntity.ok(postResponse);
     }
 
-//// 4. 게시글 수정
-//    @PatchMapping("/community/patch/{postId}")
-//    public ResponseEntity<Post> updatePost(@PathVariable int postId, @RequestBody PostRequest postRequest) {
-//
-//    }
+
+    //    4-1 게시글 수정 폼 불러오기
+    @GetMapping("/community/patch/{postId}")
+    public ResponseEntity<PostRequest> updatePost(@PathVariable long postId) {
+        PostRequest postInformation = postService.getModifyForm(postId);
+        return ResponseEntity.ok(postInformation);
+    }
 
 
-//    4-1 게시글 수정 폼 불러오기
+// 4. 게시글 수정
+    @PatchMapping("/community/patch/{postId}")
+    public ResponseEntity<PostResponse> updatePost(@PathVariable long postId, @RequestBody PostRequest postRequest) {
+        PostResponse postResponse = postService.modifyPost(postId, postRequest);
+        return ResponseEntity.ok(postResponse);
+    }
+
+
+
+
 
 // 5. 게시글 삭제
 // 빈환값 제외 구현 완료
@@ -90,33 +105,34 @@ public class CommunityController {
         List<Post> post = postService.getPostsByHealthCategory(healthCategory);
         return ResponseEntity.ok(post);
     }
-//
-//// 7. 댓글 달기
-    @PostMapping("/community/{postId}/comments")
-    public ResponseEntity<String> registerComment(@PathVariable long postId, @AuthenticationPrincipal CustomUserDetails customUserDetails,@RequestBody CommentRequest commentRequest) {
-        Member member = securityUtil.getCurrentMember();
-        String message = commentService.registerComment(postId, member, commentRequest);
 
-        return ResponseEntity.ok(message);
+
+    // 7. 댓글 달기
+    @PostMapping("/community/{postId}/comments")
+    public ResponseEntity<Comment> registerComment(@PathVariable long postId, @AuthenticationPrincipal CustomUserDetails customUserDetails,@RequestBody CommentRequest commentRequest) {
+        Member member = securityUtil.getCurrentMember();
+        Comment comment = commentService.registerComment(postId, member, commentRequest);
+
+        return ResponseEntity.ok(comment);
     }
 
 
 
-//// 8. 댓글 수정
-//    @PatchMapping("community/{postId}/comment/modify/{commentId}")
-//    public ResponseEntity<> patchComment() {
-//
-//    }
-//
-//
-//    // 8. 댓글 수정
-//    @GetMapping("community/{postId}/comment/modify/{commentId}")
-//    public ResponseEntity<> getPatchCommentForm() {
-//
-//    }
-//
-//
-//
+    // 8 - 1. 댓글 수정 폼 불러오가
+    @GetMapping("community/{postId}/comment/modify/{commentId}")
+    public ResponseEntity<CommentRequest> getPatchCommentForm(long commentId) {
+        CommentRequest commentRequest = commentService.getModifyForm(commentId);
+        return ResponseEntity.ok(commentRequest);
+    }
+
+    // 8 - 2. 댓글 수정 구현
+    @PatchMapping("community/{postId}/comment/modify/{commentId}")
+    public ResponseEntity<Comment> patchComment(@PathVariable long commentId, CommentRequest commentRequest) {
+        Comment modifyComment = commentService.modifyComment(commentId ,commentRequest);
+        return ResponseEntity.ok(modifyComment);
+
+    }
+
     // 9. 댓글 삭제
     @DeleteMapping("/community/{postId}/comments/{commentId}")
     public ResponseEntity<String> deleteComment(@PathVariable Long postId, @PathVariable Long commentId) {

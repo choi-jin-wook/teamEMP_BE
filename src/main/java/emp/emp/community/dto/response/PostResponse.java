@@ -13,6 +13,7 @@ import java.util.List;
 @Getter
 @Setter
 public class PostResponse {
+    private long postId;
     private String title;
     private String bodyText;
     private PostType postType;
@@ -20,5 +21,6 @@ public class PostResponse {
     private HealthCategory healthCategory;
     private List<Comment> comments;
     private long likes;
+    private Boolean isLiked;
     private String imageUrl;
 }

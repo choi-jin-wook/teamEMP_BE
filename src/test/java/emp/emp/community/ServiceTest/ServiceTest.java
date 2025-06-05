@@ -4,6 +4,7 @@ package emp.emp.community.ServiceTest;
 import emp.emp.community.dto.request.CommentRequest;
 import emp.emp.community.dto.request.PostRequest;
 import emp.emp.community.dto.response.PostResponse;
+import emp.emp.community.entity.Comment;
 import emp.emp.community.entity.Post;
 import emp.emp.community.enums.HealthCategory;
 import emp.emp.community.enums.PostType;
@@ -97,9 +98,10 @@ public class ServiceTest {
 
 
             try {
-                Long id = postService.createPost(testMember, validPostRequest, mockFile);
-                Optional<Post> post = postRepository.findById(id);
-                assertThat(id).isNotNull();
+                PostResponse postResponse = postService.createPost(testMember, validPostRequest, mockFile);
+
+                Optional<Post> post = postRepository.findById(postResponse.getPostId());
+                assertThat(postResponse.getPostId()).isNotNull();
                 assertThat(post.isPresent()).isTrue();
 
             } catch (Exception e) {
@@ -119,9 +121,10 @@ public class ServiceTest {
 
 
 
-            Long id = postService.createPost(testMember, validPostRequest, mockFile);
+            PostResponse post = postService.createPost(testMember, validPostRequest, mockFile);
+            Optional<Post> postEntity = postRepository.findById(post.getPostId());
 
-            PostResponse post = postService.getPostById(id);
+
             System.out.println(post.getTitle());
             System.out.println(post.getBodyText());
             System.out.println(post.getPostType());
@@ -131,6 +134,7 @@ public class ServiceTest {
             System.out.println(post.getLikes());
             System.out.println(post.getImageUrl());
             assertThat(post).isNotNull();
+            assertThat(postEntity).isNotNull();
         }
 
 
@@ -145,11 +149,11 @@ public class ServiceTest {
 
 
 
-            Long id = postService.createPost(testMember, validPostRequest, mockFile);
-            String createLike = likeService.createOrDeleteLike(testMember, id);
-            System.out.println(createLike);
+            PostResponse tempPost = postService.createPost(testMember, validPostRequest, mockFile);
+            PostResponse postResponse = likeService.createOrDeleteLike(testMember, tempPost.getPostId());
 
-            PostResponse post = postService.getPostById(id);
+
+            PostResponse post = postService.getPostByIdAndMember(postResponse.getPostId(), testMember);
             System.out.println(post.getTitle());
             System.out.println(post.getBodyText());
             System.out.println(post.getPostType());
@@ -159,11 +163,10 @@ public class ServiceTest {
             System.out.println(post.getLikes());
             System.out.println(post.getImageUrl());
 
-            String deleteLike = likeService.createOrDeleteLike(testMember, id);
-            System.out.println(deleteLike);
+            PostResponse post2 = likeService.createOrDeleteLike(testMember, tempPost.getPostId());
 
 
-            PostResponse post2 = postService.getPostById(id);
+
             System.out.println(post2.getTitle());
             System.out.println(post2.getBodyText());
             System.out.println(post2.getPostType());
@@ -175,6 +178,36 @@ public class ServiceTest {
 
         }
 
+
+        @Test
+        void modifyPostForm () {
+            MultipartFile mockFile = new MockMultipartFile(
+                    "file",                         // name
+                    "test-image.jpg",               // original filename
+                    "image/jpeg",                   // content type
+                    "test-image-content".getBytes() // content
+            );
+            PostResponse postResponse = postService.createPost(testMember, validPostRequest, mockFile);
+
+        }
+
+        @Test
+        void modifyPost () {
+            MultipartFile mockFile = new MockMultipartFile(
+                    "file",                         // name
+                    "test-image.jpg",               // original filename
+                    "image/jpeg",                   // content type
+                    "test-image-content".getBytes() // content
+            );
+            PostResponse postResponse = postService.createPost(testMember, validPostRequest, mockFile);
+
+        }
+
+
+
+
+
+
         @Test // 5. 게시글 삭제
         void deletePost () {
             MultipartFile mockFile = new MockMultipartFile(
@@ -183,12 +216,12 @@ public class ServiceTest {
                     "image/jpeg",                   // content type
                     "test-image-content".getBytes() // content
             );
-            Long id = postService.createPost(testMember, validPostRequest, mockFile);
+            PostResponse postResponse = postService.createPost(testMember, validPostRequest, mockFile);
 
 
-            postRepository.deleteById(id);
+            postRepository.deleteById(postResponse.getPostId());
 
-            Optional<Post> post = postRepository.findById(id);
+            Optional<Post> post = postRepository.findById(postResponse.getPostId());
             assertThat(post.isPresent()).isFalse();
         }
 
@@ -239,14 +272,14 @@ public class ServiceTest {
                     "image/jpeg",                   // content type
                     "test-image-content".getBytes() // content
             );
-            Long id = postService.createPost(testMember, validPostRequest, mockFile);
+            PostResponse postResponse = postService.createPost(testMember, validPostRequest, mockFile);
             CommentRequest commentRequest = new CommentRequest();
             commentRequest.setComment("댓글이용");
-            String resultMessage = commentService.registerComment(id, testMember, commentRequest);
-            System.out.println(resultMessage);
+            Comment comment2 = commentService.registerComment(postResponse.getPostId(), testMember, commentRequest);
 
 
-            PostResponse post = postService.getPostById(id);
+
+            PostResponse post = postService.getPostByIdAndMember(postResponse.getPostId(), testMember);
             System.out.println(post.getTitle());
             System.out.println(post.getBodyText());
             System.out.println(post.getPostType());
@@ -267,13 +300,13 @@ public class ServiceTest {
                     "image/jpeg",                   // content type
                     "test-image-content".getBytes() // content
             );
-            Long id = postService.createPost(testMember, validPostRequest, mockFile);
+            PostResponse postResponse = postService.createPost(testMember, validPostRequest, mockFile);
             CommentRequest commentRequest = new CommentRequest();
             commentRequest.setComment("댓글이용");
-            String resultMessage = commentService.registerComment(id, testMember, commentRequest);
-            System.out.println(resultMessage);
+            Comment comment = commentService.registerComment(postResponse.getPostId(), testMember, commentRequest);
+            System.out.println(comment);
 
-            PostResponse post = postService.getPostById(id);
+            PostResponse post = postService.getPostByIdAndMember(postResponse.getPostId(), testMember);
             System.out.println(post.getTitle());
             System.out.println(post.getBodyText());
             System.out.println(post.getPostType());
@@ -285,10 +318,10 @@ public class ServiceTest {
             System.out.println(" ");
 
 
-            String deleteComment = commentService.deleteComment(id);
+            String deleteComment = commentService.deleteComment(postResponse.getPostId());
             System.out.println(deleteComment);
 
-            PostResponse post2 = postService.getPostById(id);
+            PostResponse post2 = postService.getPostByIdAndMember(postResponse.getPostId(), testMember);
             System.out.println(post2.getTitle());
             System.out.println(post2.getBodyText());
             System.out.println(post2.getPostType());

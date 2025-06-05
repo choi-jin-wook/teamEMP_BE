@@ -7,8 +7,11 @@ import emp.emp.community.repository.CommentRepository;
 import emp.emp.community.repository.LikeRepository;
 import emp.emp.community.repository.PostRepository;
 import emp.emp.member.entity.Member;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 
@@ -22,19 +25,16 @@ public class CommentService {
 
 
 
-    public String registerComment(long postId, Member member, CommentRequest commentRequest) {
-        Optional<Post> post = postRepository.findById(postId);
-        Comment comment = new Comment();
+    public Comment registerComment(long postId, Member member, CommentRequest commentRequest) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new EntityNotFoundException("게시글이 존재하지 않습니다. ID: " + postId));
 
-        if (post.isEmpty()) {
-            return "게사글이 존재하지 않습니다";
-        } else {
-            comment.setPost(post.get());
-            comment.setMember(member);
-            comment.setContent(commentRequest.getComment());
-            commentRepository.save(comment);
-            return "댓글 등록 완료";
-        }
+        Comment comment = new Comment();
+        comment.setPost(post);
+        comment.setMember(member);
+        comment.setContent(commentRequest.getComment());
+
+        return commentRepository.save(comment);
 
 
 
@@ -50,7 +50,21 @@ public class CommentService {
             return "삭제할 댓글이 없습니다";
         }
 
+    }
 
+    public CommentRequest getModifyForm(long commentId) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
+
+        CommentRequest commentRequest = new CommentRequest();
+        commentRequest.setComment(comment.getContent());
+        return commentRequest;
+    }
+
+    public Comment modifyComment(long commentId, CommentRequest commentRequest) {
+        Comment comment = commentRepository.findById(commentId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다"));
+        comment.setContent(commentRequest.getComment());
+        return commentRepository.save(comment);
     }
 //    addComment(Long postId, CommentRequest dto, Member member)
 //    getCommentsByPost(Long postId)
