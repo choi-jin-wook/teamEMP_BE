@@ -1,6 +1,7 @@
 package emp.emp.community.entity;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import emp.emp.community.enums.HealthCategory;
 import emp.emp.community.enums.PostType;
 import emp.emp.member.entity.Member;

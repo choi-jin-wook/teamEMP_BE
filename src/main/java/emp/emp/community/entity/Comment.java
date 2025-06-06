@@ -16,14 +16,11 @@ public class Comment extends BaseEntity {
     @Column(name = "comment_id", nullable = false)
     private long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id", nullable = false)
-    private Member member;
+    @Column(name = "member_id")
+    private Long memberId;
 
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "post_id", nullable = false)
-    private Post post;
+    @Column(name = "post_id")
+    private Long postId;
 
     @Column(name = "comment_content", nullable = false)
     private String content;

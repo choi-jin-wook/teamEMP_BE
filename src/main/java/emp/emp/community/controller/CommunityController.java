@@ -9,6 +9,7 @@ import emp.emp.community.entity.Comment;
 import emp.emp.community.entity.Like;
 import emp.emp.community.entity.Post;
 import emp.emp.community.enums.HealthCategory;
+import emp.emp.community.enums.PostType;
 import emp.emp.community.repository.CommentRepository;
 import emp.emp.community.service.CommentService;
 import emp.emp.community.service.LikeService;
@@ -27,18 +28,18 @@ import java.util.Map;
 import java.util.Objects;
 
 @RestController
-@RequestMapping("/community")
+@RequestMapping("/api/community")
 @RequiredArgsConstructor
 public class CommunityController {
 
     private final CommentRepository commentRepository;
-    private SecurityUtil securityUtil;
-    private PostService postService;
-    private LikeService likeService;
-    private CommentService commentService;
+    private final SecurityUtil securityUtil;
+    private final PostService postService;
+    private final LikeService likeService;
+    private final CommentService commentService;
 
     // 0. 초기화면 (완료)
-    @GetMapping("/community")
+    @GetMapping("/main")
     public ResponseEntity<List<Post>> getAllPosts() {
         List<Post> posts = postService.getPosts();
         return ResponseEntity.ok(posts);
@@ -47,9 +48,14 @@ public class CommunityController {
 
     // 1. 게시글 작성
     @PostMapping("/posts")
-    public ResponseEntity<PostResponse> createPost(@RequestBody PostRequest postRequest, @AuthenticationPrincipal CustomUserDetails customUserDetails, MultipartFile image) {
+    public ResponseEntity<PostResponse> createPost(
+            @RequestParam String title,
+            @RequestParam String bodyText,
+            @RequestParam PostType postType,
+            @RequestParam HealthCategory healthCategory,
+            @RequestParam(required = false) MultipartFile image) {
         Member member = securityUtil.getCurrentMember();
-        PostResponse postResponse = postService.createPost(member, postRequest, image);
+        PostResponse postResponse = postService.createPost(member, title, bodyText, postType, healthCategory, image);
 
         return ResponseEntity.ok(postResponse);
     }
@@ -84,8 +90,14 @@ public class CommunityController {
 
 // 4. 게시글 수정
     @PostMapping("/posts/{postId}")
-    public ResponseEntity<PostResponse> updatePost(@PathVariable long postId, @RequestBody PostRequest postRequest) {
-        PostResponse postResponse = postService.modifyPost(postId, postRequest);
+    public ResponseEntity<PostResponse> updatePost(
+            @RequestParam String title,
+            @RequestParam String bodyText,
+            @RequestParam PostType postType,
+            @RequestParam HealthCategory healthCategory,
+            @RequestParam(required = false) MultipartFile image,
+            @PathVariable long postId) {
+        PostResponse postResponse = postService.modifyPost(postId, title, bodyText, postType, healthCategory, image);
         return ResponseEntity.ok(postResponse);
     }
 
@@ -104,36 +116,40 @@ public class CommunityController {
 
 // 6. 카테코리별 글 조회 (완료)
     @GetMapping("/categories/{healthCategory}")
-    public ResponseEntity<List<Post>> getPost(@PathVariable HealthCategory healthCategory) {
-        List<Post> post = postService.getPostsByHealthCategory(healthCategory);
-        return ResponseEntity.ok(post);
+    public ResponseEntity<List<Post>> getPost(@PathVariable String healthCategory) {
+        try {
+            HealthCategory category = HealthCategory.valueOf(healthCategory.toUpperCase());
+            List<Post> post = postService.getPostsByHealthCategory(category);
+            return ResponseEntity.ok(post);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build(); // 잘못된 카테고리명
+        }
     }
 
 
     // 7. 댓글 달기
     @PostMapping("/posts/{postId}/comments")
-    public ResponseEntity<Comment> registerComment(@PathVariable long postId, @AuthenticationPrincipal CustomUserDetails customUserDetails,@RequestBody CommentRequest commentRequest) {
+    public ResponseEntity<PostResponse> registerComment(@PathVariable long postId, @AuthenticationPrincipal CustomUserDetails customUserDetails,@RequestBody CommentRequest commentRequest) {
         Member member = securityUtil.getCurrentMember();
-        Comment comment = commentService.registerComment(postId, member, commentRequest);
+        PostResponse postResponse = commentService.registerComment(postId, member, commentRequest);
 
-        return ResponseEntity.ok(comment);
+        return ResponseEntity.ok(postResponse);
     }
 
 
 
     // 8 - 1. 댓글 수정 폼 불러오가
     @GetMapping("/posts/{postId}/comments/{commentId}/edit")
-    public ResponseEntity<Map<String, Object>> getPatchCommentForm(long commentId) {
+    public ResponseEntity<Map<String, Object>> getPatchCommentForm(@PathVariable long commentId) {
         Map<String, Object> commentUpdateForm = commentService.getModifyForm(commentId);
         return ResponseEntity.ok(commentUpdateForm);
     }
 
     // 8 - 2. 댓글 수정 구현
     @PostMapping("/posts/{postId}/comments/{commentId}")
-    public ResponseEntity<Comment> patchComment(@PathVariable long commentId, CommentRequest commentRequest) {
-        Comment modifyComment = commentService.modifyComment(commentId ,commentRequest);
-        return ResponseEntity.ok(modifyComment);
-
+    public ResponseEntity<PostResponse> patchComment(@PathVariable long commentId, @PathVariable long postId,@RequestBody CommentRequest commentRequest) {
+        PostResponse modifyCommentPostResponse = commentService.modifyComment(commentId, postId ,commentRequest);
+        return ResponseEntity.ok(modifyCommentPostResponse);
     }
 
     // 9. 댓글 삭제

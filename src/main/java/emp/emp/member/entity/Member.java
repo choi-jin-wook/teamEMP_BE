@@ -5,6 +5,7 @@ import java.time.Period;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import emp.emp.family.entity.Family;
 import emp.emp.health.entity.Health;
 import emp.emp.health.entity.HealthComment;
@@ -57,6 +58,7 @@ public class Member extends BaseEntity {
 	private String gender;
 
 	@Setter
+
 	private LocalDate birthDay;
 
 	@Setter
@@ -105,6 +107,7 @@ public class Member extends BaseEntity {
 	 *
 	 * @return 만나이
 	 */
+
 	public int getAge() {
 		return Period.between(this.birthDay, LocalDate.now()).getYears();
 	}

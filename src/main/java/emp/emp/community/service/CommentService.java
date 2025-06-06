@@ -1,6 +1,7 @@
 package emp.emp.community.service;
 
 import emp.emp.community.dto.request.CommentRequest;
+import emp.emp.community.dto.response.PostResponse;
 import emp.emp.community.entity.Comment;
 import emp.emp.community.entity.Post;
 import emp.emp.community.repository.CommentRepository;
@@ -13,8 +14,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -28,20 +31,36 @@ public class CommentService {
 
 
 
-    public Comment registerComment(long postId, Member member, CommentRequest commentRequest) {
+    public PostResponse registerComment(long postId, Member member, CommentRequest commentRequest) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new EntityNotFoundException("게시글이 존재하지 않습니다. ID: " + postId));
 
         Comment comment = new Comment();
-        comment.setPost(post);
-        comment.setMember(member);
+        comment.setPostId(post.getId());
+        comment.setMemberId(member.getId());
         comment.setContent(commentRequest.getComment());
         comment.setUpdatedAt(LocalDateTime.now());
         comment.setCreatedAt(LocalDateTime.now());
+        commentRepository.save(comment);
 
-        return commentRepository.save(comment);
+        Post addCommentPost = postRepository.findById(postId).get();
+        PostResponse postResponse = new PostResponse();
+        postResponse.setPostId(addCommentPost.getId());
+        postResponse.setMemberName(addCommentPost.getMember().getUsername());
+        postResponse.setTitle(addCommentPost.getTitle());
+        postResponse.setBodyText(addCommentPost.getBodyText());
+        postResponse.setImageUrl(addCommentPost.getImageUrl());
+        postResponse.setLikes(likeRepository.countByPost(addCommentPost));
+        postResponse.setComments(commentRepository.findByPostId(addCommentPost.getId()));
+        postResponse.setIsLiked(!likeRepository.findByMemberAndPost(member, addCommentPost).isEmpty());
+        postResponse.setPostType(addCommentPost.getPostType());
+        postResponse.setHealthCategory(addCommentPost.getHealthCategory());
 
 
+
+
+
+        return postResponse;
 
 
     }
@@ -71,11 +90,28 @@ public class CommentService {
         return commentUpdateForm;
     }
 
-    public Comment modifyComment(long commentId, CommentRequest commentRequest) {
+    public PostResponse modifyComment(long commentId, long postId, CommentRequest commentRequest) {
         Comment comment = commentRepository.findById(commentId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다"));
         comment.setContent(commentRequest.getComment());
         comment.setUpdatedAt(LocalDateTime.now());
-        return commentRepository.save(comment);
+        commentRepository.save(comment);
+
+
+        Post modifyCommentPost = postRepository.findById(postId).get();
+        PostResponse postResponse = new PostResponse();
+        postResponse.setPostId(modifyCommentPost.getId());
+        postResponse.setMemberName(modifyCommentPost.getMember().getUsername());
+        postResponse.setTitle(modifyCommentPost.getTitle());
+        postResponse.setBodyText(modifyCommentPost.getBodyText());
+        postResponse.setImageUrl(modifyCommentPost.getImageUrl());
+        postResponse.setComments(commentRepository.findByPostId(modifyCommentPost.getId()));
+        postResponse.setLikes(likeRepository.countByPost(modifyCommentPost));
+        postResponse.setIsLiked(likeRepository.findByMemberAndPost(modifyCommentPost.getMember(), modifyCommentPost).isEmpty());
+
+        postResponse.setPostType(modifyCommentPost.getPostType());
+        postResponse.setHealthCategory(modifyCommentPost.getHealthCategory());
+
+        return postResponse;
     }
 //    addComment(Long postId, CommentRequest dto, Member member)
 //    getCommentsByPost(Long postId)

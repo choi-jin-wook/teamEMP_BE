@@ -46,7 +46,7 @@ public class LikeService {
             postResponse.setBodyText(post2.get().getBodyText()); // 내용
             postResponse.setPostType(post2.get().getPostType()); // 글 타입
             postResponse.setHealthCategory(post2.get().getHealthCategory()); // 카테고리 타입
-            postResponse.setMember(post2.get().getMember()); // 멤버
+            postResponse.setMemberName(post2.get().getMember().getUsername()); // 멤버
             postResponse.setLikes(likes); // 좋아요 수
             postResponse.setImageUrl(post2.get().getImageUrl()); // 이미지
             Optional<Like> isLiked = likeRepository.findByMemberAndPost(member, post2.get());
@@ -57,7 +57,7 @@ public class LikeService {
                 liked = false;
             }
             postResponse.setIsLiked(liked);
-            List<Comment> comments = commentRepository.findByPost(post2.get());
+            List<Comment> comments = commentRepository.findByPostId(post2.get().getId());
             postResponse.setComments(comments); // 댓글
 
 

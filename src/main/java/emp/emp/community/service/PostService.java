@@ -6,6 +6,7 @@ import emp.emp.community.entity.Comment;
 import emp.emp.community.entity.Like;
 import emp.emp.community.entity.Post;
 import emp.emp.community.enums.HealthCategory;
+import emp.emp.community.enums.PostType;
 import emp.emp.community.repository.CommentRepository;
 import emp.emp.community.repository.LikeRepository;
 import emp.emp.community.repository.PostRepository;
@@ -41,13 +42,69 @@ public class PostService {
 
 
 //    1. 게시글 작성
-    public PostResponse createPost(Member member, PostRequest postRequest, MultipartFile image) {
+//    public PostResponse createPost(Member member, PostRequest postRequest, MultipartFile image) {
+//        Post post = new Post();
+//        post.setTitle(postRequest.getTitle());
+//        post.setBodyText(postRequest.getBodyText());
+//        post.setPostType(postRequest.getPostType());
+//        post.setMember(member);
+//        post.setHealthCategory(postRequest.getHealthCategory());
+//
+//        // 이미지 업로드 방식
+//        String imageUrl = null;
+//        if (image != null && !image.isEmpty()) {
+//            try {
+//                String filename = "post-images/" + UUID.randomUUID() + "-" + image.getOriginalFilename();
+//
+//                PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+//                        .bucket("team-emp")
+//                        .key(filename)
+//                        .contentType(image.getContentType())
+//                        .build();
+//
+//                s3Client.putObject(putObjectRequest, RequestBody.fromBytes(image.getBytes()));
+//
+//                imageUrl = s3Client.utilities().getUrl(builder -> builder.bucket("team-emp").key(filename)).toExternalForm();
+//
+//            } catch (IOException e) {
+//                throw new RuntimeException("이미지 업로드 실패", e);
+//            }
+//        }
+//        post.setImageUrl(imageUrl);
+//        LocalDateTime now = LocalDateTime.now();
+//        post.setCreatedAt(now);
+//        post.setUpdatedAt(now);
+//
+//        Post savedPost = postRepository.save(post);
+//        PostResponse postResponse = new PostResponse();
+//
+//
+//        long likes = likeRepository.countByPost(savedPost);
+//        postResponse.setTitle(savedPost.getTitle()); // 제목 반환
+//        postResponse.setBodyText(savedPost.getBodyText()); // 내용
+//        postResponse.setPostType(savedPost.getPostType()); // 글 타입
+//        postResponse.setHealthCategory(savedPost.getHealthCategory()); // 카테고리 타입
+//        postResponse.setMember(savedPost.getMember()); // 멤버
+//        postResponse.setLikes(likes); // 좋아요 수
+//        postResponse.setImageUrl(savedPost.getImageUrl()); // 이미지
+//
+//        boolean liked = false;
+//        postResponse.setIsLiked(liked);
+//        postResponse.setPostId(savedPost.getId());
+//        List<Comment> comments = commentRepository.findByPost(savedPost);
+//        postResponse.setComments(comments); // 댓글
+//
+//
+//        return postResponse;
+//    }
+
+    public PostResponse createPost(Member member, String title, String bodyText, PostType postType, HealthCategory healthCategory, MultipartFile image) {
         Post post = new Post();
-        post.setTitle(postRequest.getTitle());
-        post.setBodyText(postRequest.getBodyText());
-        post.setPostType(postRequest.getPostType());
+        post.setTitle(title);
+        post.setBodyText(bodyText);
+        post.setPostType(postType);
         post.setMember(member);
-        post.setHealthCategory(postRequest.getHealthCategory());
+        post.setHealthCategory(healthCategory);
 
         // 이미지 업로드 방식
         String imageUrl = null;
@@ -83,19 +140,22 @@ public class PostService {
         postResponse.setBodyText(savedPost.getBodyText()); // 내용
         postResponse.setPostType(savedPost.getPostType()); // 글 타입
         postResponse.setHealthCategory(savedPost.getHealthCategory()); // 카테고리 타입
-        postResponse.setMember(savedPost.getMember()); // 멤버
+        postResponse.setMemberName(savedPost.getMember().getUsername()); // 멤버
         postResponse.setLikes(likes); // 좋아요 수
         postResponse.setImageUrl(savedPost.getImageUrl()); // 이미지
 
         boolean liked = false;
         postResponse.setIsLiked(liked);
         postResponse.setPostId(savedPost.getId());
-        List<Comment> comments = commentRepository.findByPost(savedPost);
+        List<Comment> comments = commentRepository.findByPostId(savedPost.getId());
         postResponse.setComments(comments); // 댓글
 
 
         return postResponse;
     }
+
+
+
 
 //    2. 게시글 조회
     public PostResponse getPostByIdAndMember(long postId, Member member) {
@@ -109,7 +169,7 @@ public class PostService {
             postResponse.setBodyText(post.get().getBodyText()); // 내용
             postResponse.setPostType(post.get().getPostType()); // 글 타입
             postResponse.setHealthCategory(post.get().getHealthCategory()); // 카테고리 타입
-            postResponse.setMember(post.get().getMember()); // 멤버
+            postResponse.setMemberName(post.get().getMember().getUsername()); // 멤버
             postResponse.setLikes(likes); // 좋아요 수
             postResponse.setImageUrl(post.get().getImageUrl()); // 이미지
             Optional<Like> isLiked = likeRepository.findByMemberAndPost(member, post.get());
@@ -120,10 +180,12 @@ public class PostService {
                 liked = false;
             }
             postResponse.setIsLiked(liked);
-            List<Comment> comments = commentRepository.findByPost(post.get());
+            List<Comment> comments = commentRepository.findByPostId(post.get().getId());
             postResponse.setComments(comments); // 댓글
 
 
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다");
         }
         return postResponse;
     }
@@ -164,9 +226,9 @@ public class PostService {
         postResponse.setTitle(updatedPost.getTitle());
         postResponse.setBodyText(updatedPost.getBodyText());
         postResponse.setPostType(updatedPost.getPostType());
-        postResponse.setMember(updatedPost.getMember());
+        postResponse.setMemberName(updatedPost.getMember().getUsername());
         postResponse.setHealthCategory(updatedPost.getHealthCategory());
-        List<Comment> comments = commentRepository.findByPost(updatedPost);
+        List<Comment> comments = commentRepository.findByPostId(updatedPost.getId());
         postResponse.setComments(comments);
         postResponse.setImageUrl(updatedPost.getImageUrl());
         long likes = likeRepository.countByPost(updatedPost);
@@ -176,6 +238,52 @@ public class PostService {
     }
 
 
+    public PostResponse modifyPost(long postId, String title, String bodyText, PostType postType, HealthCategory healthCategory, MultipartFile image) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."));
+
+        post.setTitle(title);
+        post.setBodyText(bodyText);
+        post.setPostType(postType);
+        post.setHealthCategory(healthCategory);
+        post.setUpdatedAt(LocalDateTime.now());
+        String imageUrl = null;
+        if (image != null && !image.isEmpty()) {
+            try {
+                String filename = "post-images/" + UUID.randomUUID() + "-" + image.getOriginalFilename();
+
+                PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                        .bucket("team-emp")
+                        .key(filename)
+                        .contentType(image.getContentType())
+                        .build();
+
+                s3Client.putObject(putObjectRequest, RequestBody.fromBytes(image.getBytes()));
+
+                imageUrl = s3Client.utilities().getUrl(builder -> builder.bucket("team-emp").key(filename)).toExternalForm();
+
+            } catch (IOException e) {
+                throw new RuntimeException("이미지 업로드 실패", e);
+            }
+        }
+        post.setImageUrl(imageUrl);
+
+        // 저장
+        Post updatedPost = postRepository.save(post);
+
+        PostResponse postResponse = new PostResponse();
+        postResponse.setPostId(updatedPost.getId());
+        postResponse.setTitle(updatedPost.getTitle());
+        postResponse.setBodyText(updatedPost.getBodyText());
+        postResponse.setPostType(updatedPost.getPostType());
+        postResponse.setHealthCategory(updatedPost.getHealthCategory());
+        postResponse.setMemberName(updatedPost.getMember().getUsername());
+        postResponse.setLikes(likeRepository.countByPost(updatedPost));
+        List<Comment> comments = commentRepository.findByPostId(updatedPost.getId());
+        postResponse.setIsLiked(likeRepository.findByMemberAndPost(updatedPost.getMember(), updatedPost).isPresent());
+        postResponse.setComments(comments);
+        return postResponse;
+    }
 
 
 //    5. 게시글 삭제

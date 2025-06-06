@@ -17,7 +17,7 @@ public class PostResponse {
     private String title;
     private String bodyText;
     private PostType postType;
-    private Member member;
+    private String memberName;
     private HealthCategory healthCategory;
     private List<Comment> comments;
     private long likes;
